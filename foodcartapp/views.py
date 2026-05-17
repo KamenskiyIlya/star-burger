@@ -1,32 +1,38 @@
+import json
+
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
 
-
-from .models import Product
+from .models import Order, OrderProduct, Product
 
 
 def banners_list_api(request):
     # FIXME move data to db?
-    return JsonResponse([
-        {
-            'title': 'Burger',
-            'src': static('burger.jpg'),
-            'text': 'Tasty Burger at your door step',
+    return JsonResponse(
+        [
+            {
+                'title': 'Burger',
+                'src': static('burger.jpg'),
+                'text': 'Tasty Burger at your door step',
+            },
+            {
+                'title': 'Spices',
+                'src': static('food.jpg'),
+                'text': 'All Cuisines',
+            },
+            {
+                'title': 'New York',
+                'src': static('tasty.jpg'),
+                'text': 'Food is incomplete without a tasty dessert',
+            },
+        ],
+        safe=False,
+        json_dumps_params={
+            'ensure_ascii': False,
+            'indent': 4,
         },
-        {
-            'title': 'Spices',
-            'src': static('food.jpg'),
-            'text': 'All Cuisines',
-        },
-        {
-            'title': 'New York',
-            'src': static('tasty.jpg'),
-            'text': 'Food is incomplete without a tasty dessert',
-        }
-    ], safe=False, json_dumps_params={
-        'ensure_ascii': False,
-        'indent': 4,
-    })
+    )
 
 
 def product_list_api(request):
@@ -43,20 +49,78 @@ def product_list_api(request):
             'category': {
                 'id': product.category.id,
                 'name': product.category.name,
-            } if product.category else None,
+            }
+            if product.category
+            else None,
             'image': product.image.url,
             'restaurant': {
                 'id': product.id,
                 'name': product.name,
-            }
+            },
         }
         dumped_products.append(dumped_product)
-    return JsonResponse(dumped_products, safe=False, json_dumps_params={
-        'ensure_ascii': False,
-        'indent': 4,
-    })
+    return JsonResponse(
+        dumped_products,
+        safe=False,
+        json_dumps_params={
+            'ensure_ascii': False,
+            'indent': 4,
+        },
+    )
 
 
 def register_order(request):
-    # TODO это лишь заглушка
-    return JsonResponse({})
+    try:
+        order_data = json.loads(request.body.decode())
+        order = Order.objects.create(
+            first_name=order_data['firstname'],
+            last_name=order_data['lastname'],
+            phone_number=order_data['phonenumber'],
+            address=order_data['address'],
+        )
+
+        products_in_order = []
+        total_order_price = 0
+        for position in order_data.get('products', []):
+            product_id = position['product']
+            amount = position['quantity']
+
+            product = get_object_or_404(Product, id=product_id)
+
+            total_position_price = amount * product.price
+            total_order_price += total_position_price
+
+            products_in_order.append(
+                {
+                    'product_id': product.id,
+                    'product_name': product.name,
+                    'product_price': product.price,
+                    'amount': amount,
+                    'total_position_price': total_position_price,
+                }
+            )
+
+            OrderProduct.objects.create(
+                order=order,
+                product=product,
+                amount=amount,
+            )
+
+        return JsonResponse(
+            {
+                'order_id': order.id,
+                'first_name': order.first_name,
+                'last_name': order.last_name,
+                'phone_number': str(order.phone_number),
+                'address': order.address,
+                'products': products_in_order,
+                'total_price': total_order_price,
+            }
+        )
+
+    except ValueError:
+        return JsonResponse(
+            {
+                'error': 'ValueError',
+            }
+        )

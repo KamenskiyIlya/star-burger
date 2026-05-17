@@ -1,12 +1,10 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.core.validators import MinValueValidator
+from phonenumber_field.modelfields import PhoneNumberField
 
 
 class Restaurant(models.Model):
-    name = models.CharField(
-        'название',
-        max_length=50
-    )
+    name = models.CharField('название', max_length=50)
     address = models.CharField(
         'адрес',
         max_length=100,
@@ -28,19 +26,14 @@ class Restaurant(models.Model):
 
 class ProductQuerySet(models.QuerySet):
     def available(self):
-        products = (
-            RestaurantMenuItem.objects
-            .filter(availability=True)
-            .values_list('product')
-        )
+        products = RestaurantMenuItem.objects.filter(
+            availability=True
+        ).values_list('product')
         return self.filter(pk__in=products)
 
 
 class ProductCategory(models.Model):
-    name = models.CharField(
-        'название',
-        max_length=50
-    )
+    name = models.CharField('название', max_length=50)
 
     class Meta:
         verbose_name = 'категория'
@@ -51,10 +44,7 @@ class ProductCategory(models.Model):
 
 
 class Product(models.Model):
-    name = models.CharField(
-        'название',
-        max_length=50
-    )
+    name = models.CharField('название', max_length=50)
     category = models.ForeignKey(
         ProductCategory,
         verbose_name='категория',
@@ -67,11 +57,9 @@ class Product(models.Model):
         'цена',
         max_digits=8,
         decimal_places=2,
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
-    image = models.ImageField(
-        'картинка'
-    )
+    image = models.ImageField('картинка')
     special_status = models.BooleanField(
         'спец.предложение',
         default=False,
@@ -79,7 +67,7 @@ class Product(models.Model):
     )
     description = models.TextField(
         'описание',
-        max_length=200,
+        max_length=250,
         blank=True,
     )
 
@@ -107,17 +95,53 @@ class RestaurantMenuItem(models.Model):
         verbose_name='продукт',
     )
     availability = models.BooleanField(
-        'в продаже',
-        default=True,
-        db_index=True
+        'в продаже', default=True, db_index=True
     )
 
     class Meta:
         verbose_name = 'пункт меню ресторана'
         verbose_name_plural = 'пункты меню ресторана'
-        unique_together = [
-            ['restaurant', 'product']
-        ]
+        unique_together = [['restaurant', 'product']]
 
     def __str__(self):
         return f"{self.restaurant.name} - {self.product.name}"
+
+
+class Order(models.Model):
+    first_name = models.CharField(
+        max_length=50, verbose_name='Имя', null=False
+    )
+    last_name = models.CharField(
+        max_length=50, verbose_name='Фамилия', null=False
+    )
+    phone_number = PhoneNumberField(verbose_name='Телефон', db_index=True)
+    address = models.CharField(
+        max_length=200,
+        verbose_name='Адрес доставки',
+        null=False,
+        db_index=True,
+    )
+
+    class Meta:
+        verbose_name = 'Заказ'
+        verbose_name_plural = 'Заказы'
+
+    def __str__(self):
+        return f'Заказ #{self.id} - {self.phone_number} - {self.first_name}'
+
+
+class OrderProduct(models.Model):
+    order = models.ForeignKey(
+        Order, on_delete=models.CASCADE, related_name='products'
+    )
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name='orders'
+    )
+    amount = models.PositiveIntegerField(
+        verbose_name='Количество',
+        validators=[MinValueValidator(0), MaxValueValidator(15)],
+    )
+
+    class Meta:
+        verbose_name = 'Продукт в заказе'
+        verbose_name_plural = 'Продукты в заказе'

@@ -1,9 +1,7 @@
 import os
 
 import dj_database_url
-
 from environs import Env
-
 
 env = Env()
 env.read_env()
@@ -27,6 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'debug_toolbar',
+    'phonenumber_field',
 ]
 
 MIDDLEWARE = [
@@ -113,9 +112,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-INTERNAL_IPS = [
-    '127.0.0.1'
-]
+INTERNAL_IPS = ['127.0.0.1']
 
 
 STATICFILES_DIRS = [
