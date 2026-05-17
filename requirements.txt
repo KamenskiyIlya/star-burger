@@ -3,3 +3,4 @@ django-debug-toolbar==5.2.*
 Pillow==11.2.*
 environs[django]==14.2.*
 django-phonenumber-field==8.4.*
+djangorestframework==3.17.*
