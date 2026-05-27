@@ -1,12 +1,37 @@
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
-from phonenumber_field.phonenumber import to_python
-from rest_framework import status
+from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.serializers import CharField, IntegerField, ModelSerializer
 
 from .models import Order, OrderProduct, Product
+
+
+class OrderProductSerializer(ModelSerializer):
+    quantity = IntegerField(source='amount')
+
+    class Meta:
+        model = OrderProduct
+        fields = ['product', 'quantity']
+
+
+class OrderSerializer(ModelSerializer):
+    firstname = CharField(source='first_name')
+    lastname = CharField(source='last_name')
+    phonenumber = PhoneNumberField(source='phone_number')
+    products = OrderProductSerializer(many=True, allow_empty=False)
+
+    class Meta:
+        model = Order
+        fields = [
+            'firstname',
+            'lastname',
+            'phonenumber',
+            'address',
+            'products',
+        ]
 
 
 def banners_list_api(request):
@@ -73,22 +98,8 @@ def product_list_api(request):
 
 @api_view(['POST'])
 def register_order(request):
-    validation_result = validate_product_field(request, 'products')
-    if validation_result:
-        return validation_result
-
-    required_fields = ['firstname', 'lastname', 'address', 'phonenumber']
-    validation_result = validate_string_fields(request, required_fields)
-    if validation_result:
-        return validation_result
-
-    validation_result = validate_phonenumber(request, 'phonenumber')
-    if validation_result:
-        return validation_result
-
-    validation_result = validate_products_exist(request, 'products')
-    if validation_result:
-        return validation_result
+    serializer = OrderSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
 
     try:
         order_data = request.data
@@ -145,79 +156,3 @@ def register_order(request):
                 'error': 'ValueError',
             }
         )
-
-
-def validate_product_field(request, field):
-    if field not in request.data:
-        return Response(
-            {field: 'Обязательное поле'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if request.data[field] is None:
-        return Response(
-            {field: 'Это поле не может быть пустым.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if not isinstance(request.data[field], list):
-        return Response(
-            {field: 'Ожидался list, но получены другие данные'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if not request.data[field]:
-        return Response(
-            {field: 'Этот список не может быть пустым'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-
-def validate_string_fields(request, string_fields):
-    missing_fields = []
-    null_fields = []
-    for field in string_fields:
-        if field not in request.data:
-            missing_fields.append(field)
-        elif request.data[field] is None or request.data[field] == '':
-            null_fields.append(field)
-        elif not isinstance(request.data[field], str):
-            return Response(
-                {field: ': Not a valid string'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        elif not request.data[field]:
-            missing_fields.append(field)
-
-    if null_fields:
-        fields_str = ', '.join(null_fields)
-        return Response(
-            {fields_str: 'Это поле не может быть пустым'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if missing_fields:
-        fields_str = ', '.join(missing_fields)
-        return Response(
-            {fields_str: 'Обязательное поле'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-
-def validate_phonenumber(request, field):
-    phonenumber_str = request.data[field].strip()
-    phonenumber = to_python(phonenumber_str)
-    if not phonenumber.is_valid():
-        return Response(
-            {field: 'Введен некорректный номер телефона'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-
-def validate_products_exist(request, field):
-    requested_products = request.data.get(field)
-    existing_product_ids = Product.objects.values_list(flat=True)
-
-    for position in requested_products:
-        product_id = position.get('product')
-        if product_id not in existing_product_ids:
-            return Response(
-                {field: f'Недопустимый первичный ключ "{product_id}"'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
