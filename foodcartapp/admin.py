@@ -112,6 +112,7 @@ class ProductAdmin(admin.ModelAdmin):
 class OrderProductInline(admin.TabularInline):
     model = OrderProduct
     extra = 0
+    readonly_fields = ['price']
 
 
 @admin.register(Order)
@@ -134,10 +135,16 @@ class OrderAdmin(admin.ModelAdmin):
     inlines = [OrderProductInline]
     search_fields = ['id', 'phone_number', 'address']
 
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for instance in instances:
+            instance.price = instance.product.price
+            instance.save()
+        formset.save_m2m()
+
     def total_price_display(self, obj):
         total_price = sum(
-            position.product.price * position.amount
-            for position in obj.products.all()
+            position.price * position.amount for position in obj.products.all()
         )
         return f'{total_price} руб.'
 
