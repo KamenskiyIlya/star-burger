@@ -1,5 +1,4 @@
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework.decorators import api_view
@@ -21,11 +20,14 @@ class OrderSerializer(ModelSerializer):
     firstname = CharField(source='first_name')
     lastname = CharField(source='last_name')
     phonenumber = PhoneNumberField(source='phone_number')
-    products = OrderProductSerializer(many=True, allow_empty=False)
+    products = OrderProductSerializer(
+        many=True, allow_empty=False, write_only=True
+    )
 
     class Meta:
         model = Order
         fields = [
+            'id',
             'firstname',
             'lastname',
             'phonenumber',
@@ -101,58 +103,21 @@ def register_order(request):
     serializer = OrderSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    try:
-        order_data = request.data
+    validated_data = serializer.validated_data
 
-        order = Order.objects.create(
-            first_name=order_data['firstname'],
-            last_name=order_data['lastname'],
-            phone_number=order_data['phonenumber'],
-            address=order_data['address'],
+    order = Order.objects.create(
+        first_name=validated_data['first_name'],
+        last_name=validated_data['last_name'],
+        phone_number=validated_data['phone_number'],
+        address=validated_data['address'],
+    )
+
+    for position in validated_data['products']:
+        OrderProduct.objects.create(
+            order=order,
+            product=position['product'],
+            amount=position['amount'],
         )
 
-        products_in_order = []
-        total_order_price = 0
-        for position in order_data.get('products', []):
-            product_id = position['product']
-            amount = position['quantity']
-
-            product = get_object_or_404(Product, id=product_id)
-
-            total_position_price = amount * product.price
-            total_order_price += total_position_price
-
-            products_in_order.append(
-                {
-                    'product_id': product.id,
-                    'product_name': product.name,
-                    'product_price': product.price,
-                    'amount': amount,
-                    'total_position_price': total_position_price,
-                }
-            )
-
-            OrderProduct.objects.create(
-                order=order,
-                product=product,
-                amount=amount,
-            )
-
-        finally_order_data = {
-            'order_id': order.id,
-            'first_name': order.first_name,
-            'last_name': order.last_name,
-            'phone_number': str(order.phone_number),
-            'address': order.address,
-            'products': products_in_order,
-            'total_price': total_order_price,
-        }
-
-        return Response(finally_order_data)
-
-    except ValueError:
-        return JsonResponse(
-            {
-                'error': 'ValueError',
-            }
-        )
+    response_serializer = OrderSerializer(order)
+    return Response(response_serializer.data)
