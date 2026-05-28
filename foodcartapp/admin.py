@@ -165,7 +165,10 @@ class OrderAdmin(admin.ModelAdmin):
         ),
         (
             'Финансы',
-            {'fields': ('total_price_display',), 'classes': ('wide',)},
+            {
+                'fields': ('total_price_display', 'payment_method'),
+                'classes': ('wide',),
+            },
         ),
     )
 
