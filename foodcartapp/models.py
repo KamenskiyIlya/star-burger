@@ -138,11 +138,13 @@ class Order(models.Model):
         db_index=True,
     )
     status = models.CharField(
+        verbose_name='Статус заказа',
         max_length=20,
         choices=ORDER_STATUSES,
         default='NEW',
         db_index=True,
     )
+    comment = models.TextField(verbose_name='Комментарий к заказу', blank=True)
 
     objects = OrderQuerySet.as_manager()
 

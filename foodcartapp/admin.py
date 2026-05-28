@@ -125,6 +125,7 @@ class OrderAdmin(admin.ModelAdmin):
         'first_name',
         'last_name',
         'status',
+        'comment',
         'total_price_display',
     ]
     list_display_links = [
