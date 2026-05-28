@@ -144,7 +144,27 @@ class Order(models.Model):
         default='NEW',
         db_index=True,
     )
-    comment = models.TextField(verbose_name='Комментарий к заказу', blank=True)
+    comment = models.TextField(
+        verbose_name='Комментарий к заказу', blank=True, default=''
+    )
+
+    created_at = models.DateTimeField(
+        verbose_name='Время регистрации заказа',
+        auto_now_add=True,
+        db_index=True,
+    )
+    called_at = models.DateTimeField(
+        verbose_name='Время звонка',
+        db_index=True,
+        blank=True,
+        null=True,
+    )
+    delivered_at = models.DateTimeField(
+        verbose_name='Время доставки',
+        db_index=True,
+        blank=True,
+        null=True,
+    )
 
     objects = OrderQuerySet.as_manager()
 

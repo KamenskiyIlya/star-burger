@@ -120,6 +120,7 @@ class OrderProductInline(admin.TabularInline):
 class OrderAdmin(admin.ModelAdmin):
     list_display = [
         'id',
+        'created_at',
         'phone_number',
         'address',
         'first_name',
@@ -134,9 +135,39 @@ class OrderAdmin(admin.ModelAdmin):
     ]
     readonly_fields = [
         'total_price_display',
+        'created_at',
     ]
     inlines = [OrderProductInline]
     search_fields = ['id', 'phone_number', 'address']
+
+    fieldsets = (
+        (
+            'Клиент',
+            {'fields': ('first_name', 'last_name', 'phone_number', 'address')},
+        ),
+        (
+            'Статус и даты',
+            {
+                'fields': (
+                    'status',
+                    'created_at',
+                    'called_at',
+                    'delivered_at',
+                ),
+                'classes': ('wide',),
+            },
+        ),
+        (
+            'Комментарий',
+            {
+                'fields': ('comment',),
+            },
+        ),
+        (
+            'Финансы',
+            {'fields': ('total_price_display',), 'classes': ('wide',)},
+        ),
+    )
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
