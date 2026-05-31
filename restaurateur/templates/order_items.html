@@ -39,22 +39,26 @@
           {% if order.restaurant %}
             <span style="color: green;">Готовит {{ order.restaurant.name }}</span>
           {% else %}
-            {% with available_restaurants=order.available_restaurants %}
-              {% if available_restaurants %}
+            {% if order.restaurants_with_distance %}
                 <details>
                   <summary>Может быть приготовлен ресторанами:</summary>
                   <ul>
-                    {% for restaurant in available_restaurants %}
-                      <li>{{ restaurant.name }}</li>
+                    {% for restaurant_info in order.restaurants_with_distance %}
+                      <li>
+                        {{ restaurant_info.restaurant.name }} -
+                        {% if restaurant_info.distance %}
+                          {{ restaurant_info.distance }} км
+                        {% else %}
+                          Ошибка определения координат
+                        {% endif %}
+                      </li>
                     {% endfor %}
                   </ul>
                 </details>
-              {% else %}
-                <span style="color: red;">Нет подходящих ресторанов</span>
-              {% endif %}
-            {% endwith %}
+            {% else %}
+              <span style="color: red;">Нет подходящих ресторанов</span>
+            {% endif %}
           {% endif %}
-
         <td>
           <a href="{% url 'admin:foodcartapp_order_change' order.id %}?next={{ request.path|urlencode }}">ред.</a>
         </td>
