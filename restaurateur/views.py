@@ -18,7 +18,12 @@ from foodcartapp.models import (
     Restaurant,
     RestaurantMenuItem,
 )
-from utils.geocoding import calculate_distance, get_coordinates
+from utils.geocoding import (
+    calculate_distance,
+    get_cached_coordinates_bulk,
+    get_coordinates,
+    save_coordinates_bulk,
+)
 
 
 class Login(forms.Form):
@@ -145,14 +150,30 @@ def view_orders(request):
         .order_by('status_order', '-id')
     )
 
+    restaurants_by_product = get_restaurants_by_product(orders)
+    order_restaurant_ids = get_available_restaurant_ids(
+        orders, restaurants_by_product
+    )
+    restaurants_by_id = get_restaurants_by_id(order_restaurant_ids)
+    find_distance_for_orders(orders, order_restaurant_ids, restaurants_by_id)
+
+    return render(
+        request,
+        template_name='order_items.html',
+        context={
+            'orders': orders,
+        },
+    )
+
+
+def get_restaurants_by_product(orders):
+    """Возвращает словарь c id продуктов и id ресторанов, где их готовят"""
     all_product_ids = set()
-    order_with_products = {}
 
     for order in orders:
         product_ids = [
             position.product_id for position in order.products.all()
         ]
-        order_with_products[order.id] = product_ids
         all_product_ids.update(product_ids)
 
     menu_items = RestaurantMenuItem.objects.filter(
@@ -164,70 +185,78 @@ def view_orders(request):
     for product_id, restaurant_id in menu_items:
         restaurants_by_product[product_id].add(restaurant_id)
 
-    order_available_restaurant_ids = {}
-    all_restaurant_ids = set()
+    return restaurants_by_product
+
+
+def get_available_restaurant_ids(orders, restaurants_by_product):
+    """
+    Возвращает словарь id заказов и id ресторанов,
+    которые могут приготовить заказы.
+    """
+    order_restaurant_ids = {}
 
     for order in orders:
-        product_ids = order_with_products.get(order.id, [])
+        product_ids = [
+            position.product_id for position in order.products.all()
+        ]
 
-        if not product_ids:
-            order_available_restaurant_ids[order.id] = []
+        cant_cook = any(
+            product_id not in restaurants_by_product
+            for product_id in product_ids
+        )
+        if cant_cook:
+            order_restaurant_ids[order.id] = []
             continue
 
-        restaurants_not_cook = False
-        for product_id in product_ids:
-            if product_id not in restaurants_by_product:
-                restaurants_not_cook = True
-                break
-
-        if restaurants_not_cook:
-            order_available_restaurant_ids[order.id] = []
-            continue
-
-        available_restaurants_id_sets = [
+        restaurant_sets = [
             restaurants_by_product[product_id] for product_id in product_ids
         ]
-        available_restaurants_ids = set.intersection(
-            *available_restaurants_id_sets
-        )
+        available_restaurant_ids = set.intersection(*restaurant_sets)
 
-        order_available_restaurant_ids[order.id] = list(
-            available_restaurants_ids
-        )
-        all_restaurant_ids.update(available_restaurants_ids)
+        order_restaurant_ids[order.id] = list(available_restaurant_ids)
 
-    restaurant_by_id = {
+    return order_restaurant_ids
+
+
+def get_restaurants_by_id(order_restaurant_ids):
+    """Возвращает словарь id ресторанов и записей о них из БД"""
+    all_restaurant_ids = set()
+    for restaurant_ids in order_restaurant_ids.values():
+        all_restaurant_ids.update(restaurant_ids)
+
+    restaurants_by_id = {
         restaurant.id: restaurant
         for restaurant in Restaurant.objects.filter(id__in=all_restaurant_ids)
     }
 
+    return restaurants_by_id
+
+
+def find_distance_for_orders(orders, order_restaurant_ids, restaurants_by_id):
+    """Находит дистанцию между адресом заказа и всеми доступными ресторанами"""
     yandex_token = settings.YANDEX_GEOCODER_API_KEY
 
-    for order in orders:
-        restaurant_ids = order_available_restaurant_ids.get(order.id, [])
-        restaurants = [
-            restaurant_by_id[restaurant_id]
-            for restaurant_id in restaurant_ids
-            if restaurant_id in restaurant_by_id
-        ]
+    all_addresses = set()
+    order_adresses = {}
 
-        order_coords = None
-        try:
-            order_coords = get_coordinates(yandex_token, order.address)
-        except RequestException as e:
-            print(f'Ошибка геокодера для заказа {order.id}: {e}')
-            order.restaurants_with_distance = []
+    for order in orders:
+        order_adresses[order.id] = order.address
+        all_addresses.add(order.address)
+
+        for restaurant_id in order_restaurant_ids.get(order.id, []):
+            restaurant = restaurants_by_id.get(restaurant_id)
+            all_addresses.add(restaurant.address)
+
+    coords_by_address = get_coordinates_bulk(yandex_token, all_addresses)
+
+    for order in orders:
+        order_coords = coords_by_address.get(order_adresses.get(order.id))
 
         restaurants_with_distance = []
-        for restaurant in restaurants:
-            restaurant_coords = None
-            try:
-                restaurant_coords = get_coordinates(
-                    yandex_token, restaurant.address
-                )
-            except RequestException as e:
-                print(f'Ошибка геокодера для заказа {order.id}: {e}')
-                order.restaurants_with_distance = []
+        for restaurant_id in order_restaurant_ids.get(order.id, []):
+            restaurant = restaurants_by_id.get(restaurant_id)
+
+            restaurant_coords = coords_by_address.get(restaurant.address)
 
             distance = None
             if order_coords and restaurant_coords:
@@ -248,10 +277,27 @@ def view_orders(request):
         )
         order.restaurants_with_distance = restaurants_with_distance
 
-    return render(
-        request,
-        template_name='order_items.html',
-        context={
-            'orders': orders,
-        },
-    )
+
+def get_coordinates_bulk(api_key, addresses):
+    geopoints_with_coords = get_cached_coordinates_bulk(addresses)
+
+    missing_geopoints = [
+        address
+        for address in addresses
+        if address not in geopoints_with_coords
+    ]
+    new_coords = {}
+
+    for address in missing_geopoints:
+        try:
+            coords = get_coordinates(api_key, address)
+            geopoints_with_coords[address] = coords
+            new_coords[address] = coords
+
+        except RequestException as e:
+            print(f'Ошибка геокодера для адреса {address}: {e}')
+
+    if new_coords:
+        save_coordinates_bulk(new_coords)
+
+    return geopoints_with_coords

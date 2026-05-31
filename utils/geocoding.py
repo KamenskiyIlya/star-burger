@@ -1,6 +1,24 @@
 import requests
 from geopy.distance import distance as geopy_distance
 
+from geocacheapp.models import GeoPoint
+
+
+def get_cached_coordinates_bulk(addresses):
+    cached_geopoints = GeoPoint.objects.filter(address__in=addresses)
+    points_coords = {
+        point.address: (point.lon, point.lat) for point in cached_geopoints
+    }
+    return points_coords
+
+
+def save_coordinates_bulk(coordinates: dict):
+    geopoints_to_create = []
+    for address, (lon, lat) in coordinates.items():
+        geopoints_to_create.append(GeoPoint(address=address, lon=lon, lat=lat))
+
+    GeoPoint.objects.bulk_create(geopoints_to_create)
+
 
 def get_coordinates(apikey, address):
     base_url = "https://geocode-maps.yandex.ru/1.x"
