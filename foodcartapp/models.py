@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Sum
@@ -179,6 +181,15 @@ class Order(models.Model):
         db_index=True,
     )
 
+    restaurant = models.ForeignKey(
+        Restaurant,
+        verbose_name='Готовящий ресторан',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='cooking_orders',
+    )
+
     objects = OrderQuerySet.as_manager()
 
     class Meta:
@@ -187,6 +198,32 @@ class Order(models.Model):
 
     def __str__(self):
         return f'Заказ #{self.id} - {self.phone_number} - {self.first_name}'
+
+    def available_restaurants(self):
+        products_in_order = list(self.products.all().select_related('product'))
+        product_ids = [position.product_id for position in products_in_order]
+
+        menu_items = RestaurantMenuItem.objects.filter(
+            product_id__in=product_ids,
+            availability=True,
+        ).select_related('restaurant')
+
+        restaurants_by_product = defaultdict(set)
+        for item in menu_items:
+            restaurants_by_product[item.product_id].add(item.restaurant_id)
+
+        if not restaurants_by_product:
+            return Restaurant.objects.none()
+
+        for product_id in product_ids:
+            if product_id not in restaurants_by_product:
+                return Restaurant.objects.none()
+
+        available_restaurants_ids = set.intersection(
+            *restaurants_by_product.values()
+        )
+
+        return Restaurant.objects.filter(id__in=available_restaurants_ids)
 
 
 class OrderProduct(models.Model):

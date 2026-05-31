@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import user_passes_test
+from django.db.models import Case, IntegerField, Value, When
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
@@ -111,7 +112,20 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    orders = Order.objects.get_order_price().order_by('-id')
+    orders = (
+        Order.objects.exclude(status='COMPLETE')
+        .get_order_price()
+        .annotate(
+            status_order=Case(
+                When(status='NEW', then=Value(1)),
+                When(status='COOKING', then=Value(2)),
+                When(status='DELIVER', then=Value(3)),
+                default=Value(4),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by('status_order', '-id')
+    )
     return render(
         request,
         template_name='order_items.html',

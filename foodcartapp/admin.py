@@ -153,6 +153,7 @@ class OrderAdmin(admin.ModelAdmin):
                     'created_at',
                     'called_at',
                     'delivered_at',
+                    'restaurant',
                 ),
                 'classes': ('wide',),
             },
@@ -198,6 +199,22 @@ class OrderAdmin(admin.ModelAdmin):
             return redirect(next_url)
 
         return response
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'restaurant' and request.resolver_match.kwargs.get(
+            'object_id'
+        ):
+            order = self.get_object(
+                request, request.resolver_match.kwargs['object_id']
+            )
+            available_restaurants = order.available_restaurants()
+            kwargs['queryset'] = available_restaurants
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def save_model(self, request, obj, form, change):
+        if obj.restaurant and obj.status == 'NEW':
+            obj.status = 'COOKING'
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(ProductCategory)
