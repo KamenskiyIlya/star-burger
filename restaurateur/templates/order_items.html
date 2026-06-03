@@ -29,7 +29,7 @@
       <tr>
         <td>{{ order.id }}</td>
         <td>{{ order.get_status_display }}</td>
-        <td>{{ order.get_payment_method_display }}</td>
+        <td>{{ order.get_payment_method_display|default:"Не выбран" }}</td>
         <td>{{order.total_price}} руб</td>
         <td>{{ order.first_name }} {{order.last_name }}</td>
         <td>{{ order.phone_number }}</td>
