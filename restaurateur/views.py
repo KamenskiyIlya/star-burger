@@ -18,7 +18,7 @@ from foodcartapp.models import (
     Restaurant,
     RestaurantMenuItem,
 )
-from utils.geocoding import (
+from geocacheapp.geocoding import (
     calculate_distance,
     get_cached_coordinates_bulk,
     get_coordinates,
