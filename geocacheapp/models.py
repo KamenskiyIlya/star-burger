@@ -9,9 +9,13 @@ class GeoPoint(models.Model):
     )
     lon = models.FloatField(
         verbose_name='Долгота',
+        null=True,
+        blank=True,
     )
     lat = models.FloatField(
         verbose_name='Широта',
+        null=True,
+        blank=True,
     )
 
     last_updated = models.DateTimeField(
@@ -24,4 +28,4 @@ class GeoPoint(models.Model):
         verbose_name_plural = 'Сохраненные координаты'
 
     def __str__(self):
-        return f'{self.address} ({self.lon}, {self.lat})'
+        return f'{self.address}'
