@@ -6,16 +6,28 @@ from geocacheapp.models import GeoPoint
 
 def get_cached_coordinates_bulk(addresses):
     cached_geopoints = GeoPoint.objects.filter(address__in=addresses)
-    points_coords = {
-        point.address: (point.lon, point.lat) for point in cached_geopoints
-    }
+    points_coords = {}
+    for point in cached_geopoints:
+        if point.lon is not None and point.lat is not None:
+            points_coords[point.address] = (point.lon, point.lat)
+        else:
+            points_coords[point.address] = None
+
     return points_coords
 
 
 def save_coordinates_bulk(coordinates: dict):
     geopoints_to_create = []
-    for address, (lon, lat) in coordinates.items():
-        geopoints_to_create.append(GeoPoint(address=address, lon=lon, lat=lat))
+    for address, coords in coordinates.items():
+        if coords:
+            lon, lat = coords
+            geopoints_to_create.append(
+                GeoPoint(address=address, lon=lon, lat=lat)
+            )
+        else:
+            geopoints_to_create.append(
+                GeoPoint(address=address, lon=None, lat=None)
+            )
 
     GeoPoint.objects.bulk_create(geopoints_to_create)
 

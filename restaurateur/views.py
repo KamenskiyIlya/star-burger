@@ -252,6 +252,11 @@ def find_distance_for_orders(orders, order_restaurant_ids, restaurants_by_id):
     for order in orders:
         order_coords = coords_by_address.get(order_adresses.get(order.id))
 
+        if order_coords:
+            order.address_status = True
+        else:
+            order.address_status = False
+
         restaurants_with_distance = []
         for restaurant_id in order_restaurant_ids.get(order.id, []):
             restaurant = restaurants_by_id.get(restaurant_id)
