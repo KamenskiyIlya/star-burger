@@ -6,7 +6,6 @@ class GeoPoint(models.Model):
         verbose_name='Адрес',
         max_length=200,
         unique=True,
-        db_index=True,
     )
     lon = models.FloatField(
         verbose_name='Долгота',
