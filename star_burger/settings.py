@@ -8,11 +8,20 @@ env.read_env()
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+DEBUG = env.bool('DEBUG', True)
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', ['127.0.0.1', 'localhost'])
+
 SECRET_KEY = env('SECRET_KEY')
 YANDEX_GEOCODER_API_KEY = env.str('YANDEX_GEOCODER_API_KEY', '')
 
-DEBUG = env.bool('DEBUG', True)
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', ['127.0.0.1', 'localhost'])
+ROLLBAR_TOKEN = env('ROLLBAR_TOKEN')
+ROLLBAR_ENVIRONMENT = env('ROLLBAR_ENVIRONMENT', 'development')
+ROLLBAR = {
+    'access_token': ROLLBAR_TOKEN,
+    'environment': ROLLBAR_ENVIRONMENT,
+    'code_version': env('GIT_SHA', '1.0.0'),
+    'root': BASE_DIR,
+}
 
 CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', False)
 SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', False)
@@ -47,6 +56,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'rollbar.contrib.django.middleware.RollbarNotifierMiddleware',
 ]
 
 ROOT_URLCONF = 'star_burger.urls'

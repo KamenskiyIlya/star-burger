@@ -7,3 +7,4 @@ djangorestframework==3.17.*
 geopy==2.4.*
 requests==2.34.*
 phonenumbers==9.0.*
+rollbar==1.3.*
