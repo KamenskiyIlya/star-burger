@@ -1,6 +1,5 @@
 import os
 
-import dj_database_url
 from environs import Env
 
 env = Env()
@@ -14,8 +13,8 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', ['127.0.0.1', 'localhost'])
 SECRET_KEY = env('SECRET_KEY')
 YANDEX_GEOCODER_API_KEY = env.str('YANDEX_GEOCODER_API_KEY', '')
 
-ROLLBAR_TOKEN = env('ROLLBAR_TOKEN')
-ROLLBAR_ENVIRONMENT = env('ROLLBAR_ENVIRONMENT', 'development')
+ROLLBAR_TOKEN = env.str('ROLLBAR_TOKEN')
+ROLLBAR_ENVIRONMENT = env.str('ROLLBAR_ENVIRONMENT', 'development')
 ROLLBAR = {
     'access_token': ROLLBAR_TOKEN,
     'environment': ROLLBAR_ENVIRONMENT,
@@ -96,11 +95,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'star_burger.wsgi.application'
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:////{0}'.format(os.path.join(BASE_DIR, 'db.sqlite3'))
-    )
-}
+DATABASES = {'default': env.dj_db_url('DB_URL')}
 
 AUTH_PASSWORD_VALIDATORS = [
     {

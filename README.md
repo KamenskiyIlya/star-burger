@@ -149,6 +149,80 @@ Parcel будет следить за файлами в каталоге `bundle
 
 **Сбросьте кэш браузера <kbd>Ctrl-F5</kbd>.** Браузер при любой возможности старается кэшировать файлы статики: CSS, картинки и js-код. Порой это приводит к странному поведению сайта, когда код уже давно изменился, но браузер этого не замечает и продолжает использовать старую закэшированную версию. В норме Parcel решает эту проблему самостоятельно. Он следит за пересборкой фронтенда и предупреждает JS-код в браузере о необходимости подтянуть свежий код. Но если вдруг что-то у вас идёт не так, то начните ремонт со сброса браузерного кэша, жмите <kbd>Ctrl-F5</kbd>.
 
+## Настройка базы данных PostgreSQL
+
+По умолчанию в проектах Django используется SQLite. Для данного проекта рекомендуется использовать более производительную СУБД - PostgreSQL. Ниже приведена инструкция по установке и настройке PostgreSQL на Ubuntu. Для других операционных систем шаги могут отличаться.
+
+1. Установка PostgreSQL
+
+Установите необходимые пакеты из официальных репозиториев Ubuntu:
+
+```
+sudo apt-get update
+sudo apt-get install python3-pip python3-dev libpq-dev postgresql postgresql-contrib
+```
+
+2. Создание базы данных и пользователя
+
+Когда мы устанавливали PostgreSQL, он автоматически создал пользователя `postgres`, у которого есть права администрировать PostgreSQL, нам необходимо изменить это имя для наших задач. Вводим в терминале:
+
+```
+sudo su - postgres
+psql # входим в интерпретатор PostgreSQL
+```
+
+В интерпретаторе выполните следующие команды, заменив myproject, myprojectuser и password на ваши уникальные значения:
+
+```
+# создать БД
+CREATE DATABASE myproject;
+
+# создать пользователя с паролем
+CREATE USER myprojectuser WITH PASSWORD 'password';
+
+# настроить параметры подключения
+ALTER ROLE myprojectuser SET client_encoding TO 'utf8';
+ALTER ROLE myprojectuser SET default_transaction_isolation TO 'read committed';
+ALTER ROLE myprojectuser SET timezone TO 'UTC';
+
+# даем пользователю все права на БД
+GRANT ALL PRIVILEGES ON DATABASE myproject TO myprojectuser;
+
+# выходим из интерпретатора
+\q
+
+# выходим из под пользователя postgres
+exit
+```
+3. Настройка переменного окружения
+
+Вместо громоздких настроек в `settings.py`, добавьте в `.env` переменную `DB_URL` следующего формата:
+
+```
+DB_URL=postgres://myprojectuser:password@localhost:5432/myproject
+```
+
+где:
+- myprojectuser - имя созданного пользователя БД
+- password - пароль пользователя
+- localhost - адрес сервера
+- 5432 - стандартный порт PostgreSQL
+- myproject - имя БД
+
+В `settings.py` настройка БД должна выглядеть так:
+
+```
+DATABASES = {'default': env.dj_db_url('DB_URL')}
+```
+4. Миграция БД
+
+```
+python manage.py migrate
+```
+
+5. Запустите или перезапустите сайт и проверьте работоспособность БД.
+
+> для переноса данных из существующих БД используйте dumpdata, loaddata.
 
 ## Как запустить prod-версию сайта
 
