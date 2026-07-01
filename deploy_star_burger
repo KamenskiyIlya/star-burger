@@ -11,7 +11,7 @@ npm ci --dev
 ./node_modules/.bin/parcel build bundles-src/index.js --dist-dir bundles --public-url="./" --no-autoinstall --no-cache
 
 python manage.py collectstatic --noinput
-python manage.py migrate
+python manage.py migrate --noinput
 
 systemctl restart star_burger.service
 systemctl reload nginx
