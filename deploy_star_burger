@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 echo "Начало деплоя"
+echo "тест"
 
 git pull
 
