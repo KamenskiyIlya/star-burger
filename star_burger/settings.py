@@ -13,14 +13,15 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', ['127.0.0.1', 'localhost'])
 SECRET_KEY = env('SECRET_KEY')
 YANDEX_GEOCODER_API_KEY = env.str('YANDEX_GEOCODER_API_KEY', '')
 
-ROLLBAR_TOKEN = env.str('ROLLBAR_TOKEN')
+ROLLBAR_TOKEN = env.str('ROLLBAR_TOKEN', '')
 ROLLBAR_ENVIRONMENT = env.str('ROLLBAR_ENVIRONMENT', 'development')
-ROLLBAR = {
-    'access_token': ROLLBAR_TOKEN,
-    'environment': ROLLBAR_ENVIRONMENT,
-    'code_version': env('GIT_SHA', '1.0.0'),
-    'root': BASE_DIR,
-}
+if ROLLBAR_TOKEN:
+    ROLLBAR = {
+        'access_token': ROLLBAR_TOKEN,
+        'environment': ROLLBAR_ENVIRONMENT,
+        'code_version': env('GIT_SHA', '1.0.0'),
+        'root': BASE_DIR,
+    }
 
 CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', False)
 SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', False)
