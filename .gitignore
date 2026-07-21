@@ -1,4 +1,5 @@
-bundles/**
+frontend/dist/
+backend/bundles/
 node_modules/
 media/
 

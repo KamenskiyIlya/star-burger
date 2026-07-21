@@ -2,10 +2,10 @@ import os
 
 from environs import Env
 
-env = Env()
-env.read_env()
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+env = Env()
+env.read_env(os.path.join(BASE_DIR, '..', '.env'))
 
 DEBUG = env.bool('DEBUG', True)
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', ['127.0.0.1', 'localhost'])
@@ -135,5 +135,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "assets"),
-    os.path.join(BASE_DIR, "bundles"),
 ]
+bundles_dir = os.path.join(BASE_DIR, "bundles")
+if os.path.exists(bundles_dir):
+    STATICFILES_DIRS.append(bundles_dir)
