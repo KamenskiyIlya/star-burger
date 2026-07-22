@@ -85,7 +85,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.template.context_processors.debug',
+                'star_burger.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -123,7 +123,11 @@ USE_L10N = True
 
 USE_TZ = True
 
-INTERNAL_IPS = ['127.0.0.1']
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+    "localhost",
+]
 
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
