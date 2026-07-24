@@ -4,25 +4,20 @@ echo "Начало деплоя"
 
 git pull
 
-source venv/bin/activate
-pip install -r requirements.txt
+docker compose build
+docker compose run --rm frontend
+docker compose run --rm static
+docker compose up -d db backend
 
-npm ci --dev
-./node_modules/.bin/parcel build bundles-src/index.js --dist-dir bundles --public-url="./" --no-autoinstall --no-cache
-
-python manage.py collectstatic --noinput
-python manage.py migrate --noinput
-
-systemctl restart star_burger.service
 systemctl reload nginx
 
 echo "Отправляется уведомление о деплое в rollbar"
-source .env
 COMMIT_HASH=$(git rev-parse HEAD)
+source ../.env
 
 curl --request POST \
      --url https://api.rollbar.com/api/1/deploy \
-     --header "X-Rollbar-Access-Token: $ROLLBAR_DEPLOY_TOKEN" \
+     --header "X-Rollbar-Access-Token: $ROLLBAR_TOKEN" \
      --header 'accept: application/json' \
      --header 'content-type: application/json' \
      --data '{
