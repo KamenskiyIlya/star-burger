@@ -8,3 +8,5 @@ RUN npm ci --dev
 COPY src ./src
 
 RUN npx parcel build src/index.js --dist-dir bundles --public-url="./"
+
+CMD ["true"]
