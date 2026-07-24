@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres:18.4
+    environment:
+      - POSTGRES_DB=starburger
+      - POSTGRES_USER=starburger
+      - POSTGRES_PASSWORD=starburger
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: always
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.prod
+    volumes:
+      - frontend_bundles:/app/bundles
+    restart: "no"
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.prod
+    env_file: ../.env
+    environment:
+      - DB_URL=postgres://starburger:starburger@db:5432/starburger
+      - DEBUG=False
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/static
+      - frontend_bundles:/app/bundles:ro
+    depends_on:
+      - db
+      - frontend
+    restart: always
+
+  static:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.prod
+    command: python manage.py collectstatic --noinput
+    volumes:
+      - static_data:/app/static
+      - frontend_bundles:/app/bundles:ro
+    depends_on:
+      - backend
+    restart: "no"
+
+  volumes:
+    pg_data:
+    media_data:
+      driver_opts:
+        type: none
+        device: /var/www/media
+        o: bind
+    static_data:
+      driver_opts:
+        type: none
+        device: /var/www/static
+        o: bind
+    frontend_bundles:
