@@ -39,6 +39,8 @@ services:
       context: ../backend
       dockerfile: Dockerfile.prod
     command: python manage.py collectstatic --noinput
+    env_file:
+      - ../.env
     volumes:
       - static_data:/app/static
       - frontend_bundles:/app/bundles:ro
